@@ -15,6 +15,10 @@ app.get('/', (req, res) => {
     res.send('MuseMate Webhook Running');
 });
 
+app.get('/api', (req, res) => {
+    res.status(200).send('API endpoint active');
+});
+
 app.post('/api', async (req, res) => {
     const { action, payload } = req.body;
 
