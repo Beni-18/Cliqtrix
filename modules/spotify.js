@@ -62,8 +62,8 @@ export async function getSongRecommendations({ genre = "pop", limit = 6 }) {
         }
 
         return {
-            type: "collection",
-            title: `Top ${genre} picks`,
+            type: "list",
+            title: `Recommended songs`,
             items: tracks.map(track => ({
                 title: track.name,
                 subtitle: track.artists.map(a => a.name).join(", "),

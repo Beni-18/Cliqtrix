@@ -28,7 +28,7 @@ export async function getEvents({ keyword, city, size = 10 }) {
         }
 
         return {
-            type: "collection",
+            type: "list",
             title: "Events near you",
             items: events.map(event => {
                 const chosenImageUrl = event.images?.find(img => img.ratio === '16_9' && img.width > 600)?.url || event.images?.[0]?.url || '';

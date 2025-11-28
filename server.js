@@ -4,7 +4,6 @@ import bodyParser from 'body-parser';
 import { detectIntent } from './modules/intent.js';
 import { getSongRecommendations } from './modules/spotify.js';
 import { getEvents } from './modules/events.js';
-import { wrapCard } from './modules/cards.js';
 
 const app = express();
 const PORT = process.env.PORT || 10000;
@@ -14,41 +13,62 @@ app.use(bodyParser.json());
 
 app.post('/zobot', async (req, res) => {
     try {
-        console.log('Incoming Payload:', JSON.stringify(req.body, null, 2));
+        // 1. Log Incoming Request
+        console.log("Zobot hit:", JSON.stringify(req.body, null, 2));
 
-        const text = req.body?.message?.text || "";
-        const intent = detectIntent(text);
-        let cardResponse;
+        const message = req.body?.message?.text || "";
+        console.log("Message:", message);
 
-        console.log('Detected Intent:', intent);
+        // 2. Detect Intent
+        const intent = detectIntent(message);
+        console.log("Detected intent:", intent);
 
+        let botResponse;
+
+        // 3. Handle Intents
         switch (intent.type) {
             case 'SONGS':
-                cardResponse = await getSongRecommendations({ genre: intent.genre, limit: 6 });
+                botResponse = await getSongRecommendations({ genre: intent.genre });
                 break;
             case 'EVENTS':
-                cardResponse = await getEvents({ keyword: intent.keyword, city: intent.city, size: 10 });
+                botResponse = await getEvents({ keyword: intent.keyword, city: intent.city });
                 break;
             default:
-                cardResponse = {
+                botResponse = {
                     type: "text",
-                    text: "I can help you find music recommendations or events. Try saying 'recommend pop songs' or 'events in London'."
+                    text: "I didn’t understand that yet. Try asking for songs or events!"
                 };
                 break;
         }
 
-        const finalResponse = wrapCard(cardResponse);
+        // 4. Ensure Response Format (Auto-convert to list if needed)
+        if (botResponse.type === 'collection') {
+            botResponse.type = 'list';
+        }
+
+        const finalResponse = {
+            status: "success",
+            zobot: botResponse
+        };
+
+        // 5. Log Outgoing Response
+        console.log("Sending:", JSON.stringify(finalResponse, null, 2));
+
         res.json(finalResponse);
 
     } catch (error) {
         console.error('Server Error:', error);
-        res.json({
-            status: "error",
+
+        // 6. Guarantee Reply
+        const errorResponse = {
+            status: "success",
             zobot: {
                 type: "text",
-                text: "Oops! Something went wrong 😕"
+                text: "Sorry! Something went wrong processing your request."
             }
-        });
+        };
+        console.log("Sending Error Response:", JSON.stringify(errorResponse, null, 2));
+        res.json(errorResponse);
     }
 });
 
