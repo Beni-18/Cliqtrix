@@ -27,37 +27,33 @@ export async function getEvents({ keyword, city, size = 10 }) {
 
         if (events.length === 0) {
             return {
-                full: "No events found.",
-                zobot: {
-                    type: "text",
-                    text: "No events found matching your criteria."
-                }
+                type: "text",
+                text: "No events found matching your criteria."
             };
         }
 
         return {
-            full: "Here are events near you:",
-            zobot: {
-                type: "cards",
-                cards: events.map(event => {
-                    const chosenImageUrl = event.images?.find(img => img.ratio === '16_9' && img.width > 600)?.url || event.images?.[0]?.url || '';
-                    return {
-                        title: event.name,
-                        description: event.dates?.start?.localDate || "Date TBA",
-                        image: { url: chosenImageUrl },
-                        buttons: [
-                            { label: "View Event", type: "link", url: event.url }
-                        ]
-                    };
-                })
-            }
+            type: "collection",
+            title: "Events near you",
+            items: events.map(event => {
+                const chosenImageUrl = event.images?.find(img => img.ratio === '16_9' && img.width > 600)?.url || event.images?.[0]?.url || '';
+                return {
+                    title: event.name,
+                    subtitle: event.dates?.start?.localDate || "Date TBA",
+                    image_url: chosenImageUrl,
+                    action: {
+                        type: "link",
+                        payload: { url: event.url }
+                    }
+                };
+            })
         };
 
     } catch (error) {
         console.error('Ticketmaster API Error:', error);
         return {
-            error: 'ticketmaster_error',
-            details: error.message
+            type: "text",
+            text: "Could not fetch data."
         };
     }
 }

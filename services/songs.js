@@ -17,18 +17,17 @@ async function getAccessToken(clientId, clientSecret) {
 
 function mapTracksToZobot(tracks, seedGenre) {
     return {
-        full: `Top ${seedGenre} picks for you:`,
-        zobot: {
-            type: "cards",
-            cards: tracks.map(track => ({
-                title: track.name,
-                description: track.artists.map(a => a.name).join(", "),
-                image: { url: track.album.images[0]?.url || "" },
-                buttons: [
-                    { label: "Open in Spotify", type: "link", url: track.external_urls.spotify }
-                ]
-            }))
-        }
+        type: "collection",
+        title: `Top ${seedGenre} picks for you`,
+        items: tracks.map(track => ({
+            title: track.name,
+            subtitle: track.artists.map(a => a.name).join(", "),
+            image_url: track.album.images[0]?.url || "",
+            action: {
+                type: "link",
+                payload: { url: track.external_urls.spotify }
+            }
+        }))
     };
 }
 
@@ -87,18 +86,15 @@ export async function getSongRecommendations({ genre = "pop", limit = 6 }) {
         }
 
         return {
-            full: "No music found.",
-            zobot: {
-                type: "text",
-                text: "Sorry, I couldn't find any songs for that genre."
-            }
+            type: "text",
+            text: "Sorry, I couldn't find any songs for that genre."
         };
 
     } catch (error) {
         console.error('Spotify API Error:', error.response?.data || error.message);
         return {
-            error: 'spotify_error',
-            details: error.message
+            type: "text",
+            text: "Could not fetch data."
         };
     }
 }

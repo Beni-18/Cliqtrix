@@ -1,9 +1,7 @@
 import express from 'express';
 import cors from 'cors';
-import * as spotifyApi from './services/spotifyApi.js';
-import * as ticketmasterApi from './services/ticketmasterApi.js';
-import * as geminiApi from './services/geminiApi.js';
-import * as personality from './services/personality.js';
+import * as songs from './services/songs.js';
+import * as events from './services/events.js';
 
 const app = express();
 const PORT = process.env.PORT || 3000;
@@ -15,55 +13,33 @@ app.get('/', (req, res) => {
     res.send('MuseMate Webhook Running');
 });
 
-app.get('/api', (req, res) => {
-    res.status(200).send('API endpoint active');
-});
-
-app.get('/test', (req, res) => {
-    res.json({
-        status: "success",
-        full: "Test OK",
-        zobot: {
-            type: "text",
-            text: "Webhook is working"
-        }
-    });
-});
-
-app.post('/api', async (req, res) => {
-    const { action, payload } = req.body;
-
+app.post('/zobot', async (req, res) => {
     try {
-        let result;
-        switch (action) {
-            case 'suggest_song':
-                result = await spotifyApi.getSongRecommendations({ genre: payload?.genre || payload?.mood, limit: payload?.limit });
-                break;
-            case 'get_events':
-                result = await ticketmasterApi.getEvents({ keyword: payload?.keyword, city: payload?.city || payload?.location, size: payload?.size });
-                break;
-            case 'your_note':
-                result = await personality.buildPersonality(payload);
-                break;
-            default:
-                return res.status(400).json({ error: 'unknown_action' });
+        const message = req.body.message?.text?.toLowerCase() || '';
+        let response;
+
+        if (message.includes('song') || message.includes('music')) {
+            response = await songs.getSongRecommendations({ genre: 'pop' }); // Default to pop for now, could extract genre
+        } else if (message.includes('event') || message.includes('show')) {
+            response = await events.getEvents({ city: 'London' }); // Default to London for now, could extract city
+        } else {
+            response = {
+                type: "text",
+                text: "I can help you with songs or events."
+            };
         }
 
-        if (result.error) {
-            // Service reported an error, return 502 Bad Gateway or similar, but keep JSON format
-            return res.status(502).json(result);
-        }
-
-        // Wrap result in global Zobot response format
         res.json({
             status: "success",
-            full: result.full || "Response generated",
-            zobot: result.zobot || { type: "text", text: "No content generated" }
+            zobot: response
         });
 
     } catch (error) {
         console.error('Error processing request:', error);
-        res.status(500).json({ error: 'Internal Server Error', details: error.message });
+        res.json({
+            status: "error",
+            zobot: { type: "text", text: "Something went wrong." }
+        });
     }
 });
 
