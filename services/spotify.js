@@ -15,23 +15,7 @@ async function getAccessToken(clientId, clientSecret) {
     return response.data.access_token;
 }
 
-function mapTracksToZobot(tracks, seedGenre) {
-    return {
-        type: "collection",
-        title: `Top ${seedGenre} picks for you`,
-        items: tracks.map(track => ({
-            title: track.name,
-            subtitle: track.artists.map(a => a.name).join(", "),
-            image_url: track.album.images[0]?.url || "",
-            action: {
-                type: "link",
-                payload: { url: track.external_urls.spotify }
-            }
-        }))
-    };
-}
-
-export async function getSongRecommendations({ genre = "pop", limit = 6 }) {
+export async function getSongRecommendations({ genre = "pop", limit = 5 }) {
     try {
         const clientId = process.env.SPOTIFY_CLIENT_ID;
         const clientSecret = process.env.SPOTIFY_CLIENT_SECRET;
@@ -42,11 +26,12 @@ export async function getSongRecommendations({ genre = "pop", limit = 6 }) {
 
         const accessToken = await getAccessToken(clientId, clientSecret);
 
-        // Validate genre
         let seedGenre = 'pop';
         if (genre && ALLOWED_GENRES.includes(genre.toLowerCase())) {
             seedGenre = genre.toLowerCase();
         }
+
+        let tracks = [];
 
         try {
             // Try Recommendations API
@@ -59,42 +44,52 @@ export async function getSongRecommendations({ genre = "pop", limit = 6 }) {
                     'Authorization': `Bearer ${accessToken}`
                 }
             });
-
-            if (response.data.tracks && response.data.tracks.length > 0) {
-                return mapTracksToZobot(response.data.tracks, seedGenre);
-            }
+            tracks = response.data.tracks || [];
         } catch (recError) {
-            console.error(`Spotify Recommendations failed for genre '${seedGenre}':`, recError.response?.data || recError.message);
-            // Fallback to Search API
+            console.error(`Spotify Recommendations failed, falling back to search:`, recError.message);
         }
 
-        // Fallback: Search API
-        console.log(`Falling back to Spotify Search for genre: ${seedGenre}`);
-        const searchResponse = await axios.get('https://api.spotify.com/v1/search', {
-            params: {
-                q: `genre:${seedGenre}`,
-                type: 'track',
-                limit: limit
-            },
-            headers: {
-                'Authorization': `Bearer ${accessToken}`
-            }
-        });
+        // Fallback to Search API if no tracks
+        if (tracks.length === 0) {
+            const searchResponse = await axios.get('https://api.spotify.com/v1/search', {
+                params: {
+                    q: `genre:${seedGenre}`,
+                    type: 'track',
+                    limit: limit
+                },
+                headers: {
+                    'Authorization': `Bearer ${accessToken}`
+                }
+            });
+            tracks = searchResponse.data.tracks?.items || [];
+        }
 
-        if (searchResponse.data.tracks && searchResponse.data.tracks.items.length > 0) {
-            return mapTracksToZobot(searchResponse.data.tracks.items, seedGenre);
+        if (tracks.length === 0) {
+            return {
+                type: "text",
+                text: "Sorry, I couldn't find any songs for that genre."
+            };
         }
 
         return {
-            type: "text",
-            text: "Sorry, I couldn't find any songs for that genre."
+            type: "collection",
+            title: `Top ${seedGenre} picks`,
+            items: tracks.map(track => ({
+                title: track.name,
+                subtitle: track.artists.map(a => a.name).join(", "),
+                image_url: track.album.images[0]?.url || "",
+                action: {
+                    type: "link",
+                    payload: { url: track.external_urls.spotify }
+                }
+            }))
         };
 
     } catch (error) {
         console.error('Spotify API Error:', error.response?.data || error.message);
         return {
-            type: "text",
-            text: "Could not fetch data."
+            error: 'spotify_error',
+            details: error.message
         };
     }
 }

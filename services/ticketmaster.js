@@ -1,3 +1,5 @@
+import axios from 'axios';
+
 export async function getEvents({ keyword, city, size = 10 }) {
     try {
         const apiKey = process.env.TICKETMASTER_API_KEY;
@@ -15,15 +17,8 @@ export async function getEvents({ keyword, city, size = 10 }) {
         if (keyword) params.append('keyword', keyword);
         if (city) params.append('city', city);
 
-        const response = await fetch(`https://app.ticketmaster.com/discovery/v2/events.json?${params.toString()}`);
-
-        if (!response.ok) {
-            const errorText = await response.text();
-            throw new Error(`Failed to fetch events: ${response.status} ${errorText}`);
-        }
-
-        const data = await response.json();
-        const events = data._embedded?.events || [];
+        const response = await axios.get(`https://app.ticketmaster.com/discovery/v2/events.json?${params.toString()}`);
+        const events = response.data._embedded?.events || [];
 
         if (events.length === 0) {
             return {
@@ -50,7 +45,7 @@ export async function getEvents({ keyword, city, size = 10 }) {
         };
 
     } catch (error) {
-        console.error('Ticketmaster API Error:', error);
+        console.error('Ticketmaster API Error:', error.response?.data || error.message);
         return {
             type: "text",
             text: "Could not fetch data."

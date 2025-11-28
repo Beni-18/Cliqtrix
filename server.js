@@ -1,7 +1,9 @@
 import express from 'express';
 import cors from 'cors';
-import * as songs from './services/songs.js';
-import * as events from './services/events.js';
+import { detectIntent } from './utils/intent.js';
+import * as spotify from './services/spotify.js';
+import * as ticketmaster from './services/ticketmaster.js';
+import * as personality from './services/personality.js';
 
 const app = express();
 const PORT = process.env.PORT || 3000;
@@ -15,30 +17,41 @@ app.get('/', (req, res) => {
 
 app.post('/zobot', async (req, res) => {
     try {
-        const message = req.body.message?.text?.toLowerCase() || '';
-        let response;
+        const text = req.body?.message?.text || "";
+        const intent = detectIntent(text);
+        let botResponse;
 
-        if (message.includes('song') || message.includes('music')) {
-            response = await songs.getSongRecommendations({ genre: 'pop' }); // Default to pop for now, could extract genre
-        } else if (message.includes('event') || message.includes('show')) {
-            response = await events.getEvents({ city: 'London' }); // Default to London for now, could extract city
-        } else {
-            response = {
-                type: "text",
-                text: "I can help you with songs or events."
-            };
+        switch (intent) {
+            case 'suggest_song':
+                botResponse = await spotify.getSongRecommendations({ genre: 'pop', limit: 5 });
+                break;
+            case 'get_events':
+                botResponse = await ticketmaster.getEvents({ city: 'London', size: 5 });
+                break;
+            case 'your_note':
+                botResponse = await personality.buildPersonality({ text });
+                break;
+            default:
+                botResponse = {
+                    type: "text",
+                    text: "I can help you with songs, events, or generating a personality note. Try asking for 'songs' or 'events'."
+                };
+                break;
         }
 
         res.json({
             status: "success",
-            zobot: response
+            zobot: botResponse
         });
 
     } catch (error) {
-        console.error('Error processing request:', error);
+        console.error('Zobot Handler Error:', error);
         res.json({
-            status: "error",
-            zobot: { type: "text", text: "Something went wrong." }
+            status: "success", // Return success to Zoho even on error to avoid widget errors
+            zobot: {
+                type: "text",
+                text: "Something went wrong processing your request."
+            }
         });
     }
 });
