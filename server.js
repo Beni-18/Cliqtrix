@@ -1,61 +1,57 @@
 import express from 'express';
 import cors from 'cors';
-import { detectIntent } from './utils/intent.js';
-import * as spotify from './services/spotify.js';
-import * as ticketmaster from './services/ticketmaster.js';
-import * as personality from './services/personality.js';
+import bodyParser from 'body-parser';
+import { detectIntent } from './modules/intent.js';
+import { getSongRecommendations } from './modules/spotify.js';
+import { getEvents } from './modules/events.js';
+import { wrapCard } from './modules/cards.js';
 
 const app = express();
-const PORT = process.env.PORT || 3000;
+const PORT = process.env.PORT || 10000;
 
 app.use(cors());
-app.use(express.json());
-
-app.get('/', (req, res) => {
-    res.send('MuseMate Webhook Running');
-});
+app.use(bodyParser.json());
 
 app.post('/zobot', async (req, res) => {
     try {
+        console.log('Incoming Payload:', JSON.stringify(req.body, null, 2));
+
         const text = req.body?.message?.text || "";
         const intent = detectIntent(text);
-        let botResponse;
+        let cardResponse;
 
-        switch (intent) {
-            case 'suggest_song':
-                botResponse = await spotify.getSongRecommendations({ genre: 'pop', limit: 5 });
+        console.log('Detected Intent:', intent);
+
+        switch (intent.type) {
+            case 'SONGS':
+                cardResponse = await getSongRecommendations({ genre: intent.genre, limit: 6 });
                 break;
-            case 'get_events':
-                botResponse = await ticketmaster.getEvents({ city: 'London', size: 5 });
-                break;
-            case 'your_note':
-                botResponse = await personality.buildPersonality({ text });
+            case 'EVENTS':
+                cardResponse = await getEvents({ keyword: intent.keyword, city: intent.city, size: 10 });
                 break;
             default:
-                botResponse = {
+                cardResponse = {
                     type: "text",
-                    text: "I can help you with songs, events, or generating a personality note. Try asking for 'songs' or 'events'."
+                    text: "I can help you find music recommendations or events. Try saying 'recommend pop songs' or 'events in London'."
                 };
                 break;
         }
 
-        res.json({
-            status: "success",
-            zobot: botResponse
-        });
+        const finalResponse = wrapCard(cardResponse);
+        res.json(finalResponse);
 
     } catch (error) {
-        console.error('Zobot Handler Error:', error);
+        console.error('Server Error:', error);
         res.json({
-            status: "success", // Return success to Zoho even on error to avoid widget errors
+            status: "error",
             zobot: {
                 type: "text",
-                text: "Something went wrong processing your request."
+                text: "Oops! Something went wrong 😕"
             }
         });
     }
 });
 
 app.listen(PORT, () => {
-    console.log(`Server is running on port ${PORT}`);
+    console.log(`Audiva Bot Server running on port ${PORT}`);
 });

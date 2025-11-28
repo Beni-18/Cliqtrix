@@ -1,45 +1,42 @@
-# Zobot Webhook Backend
+# Audiva Bot Backend
 
-This is a Node.js backend for a Zoho SalesIQ Webhook Bot. It integrates with Spotify, Ticketmaster, and Gemini APIs.
+This is the Node.js backend for the Audiva Bot, designed for Zoho SalesIQ.
 
-## Setup
+## Deployment on Render
 
-1.  Install dependencies:
-    ```bash
-    npm install
-    ```
+1.  Create a new Web Service on Render.
+2.  Connect your repository.
+3.  Set the Build Command to `npm install`.
+4.  Set the Start Command to `node server.js`.
+5.  Add the Environment Variables from `.env.example`.
 
-2.  Configure environment variables:
-    Copy `.env.example` to `.env` and fill in your API keys.
+## Zoho Webhook Setup
 
-3.  Start the server:
-    ```bash
-    npm start
-    ```
+1.  Go to Zoho SalesIQ -> Settings -> Zobot.
+2.  Create a new bot or edit an existing one.
+3.  Choose "Webhook" as the platform.
+4.  Enter your Render URL + `/zobot` (e.g., `https://your-app.onrender.com/zobot`).
+5.  Enable "Text" input.
 
-## Endpoints
+## Test Payload
 
-### POST /zobot
-
-Handles webhook requests from Zoho SalesIQ.
-
-**Test with curl (Zoho format):**
-```bash
-curl -X POST http://localhost:3000/zobot \
-  -H "Content-Type: application/json" \
-  -d '{"message": {"text": "Songs"}}'
+```json
+{
+  "message": {
+    "text": "Recommend pop songs"
+  }
+}
 ```
 
-**Test Intent: Events**
-```bash
-curl -X POST http://localhost:3000/zobot \
-  -H "Content-Type: application/json" \
-  -d '{"message": {"text": "Show me events"}}'
-```
+## Expected Response
 
-**Test Intent: Personality**
-```bash
-curl -X POST http://localhost:3000/zobot \
-  -H "Content-Type: application/json" \
-  -d '{"message": {"text": "Generate personality note"}}'
+```json
+{
+  "status": "success",
+  "zobot": {
+    "type": "collection",
+    "title": "Top pop picks",
+    "items": [...]
+  }
+}
 ```

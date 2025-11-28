@@ -48,7 +48,7 @@ export async function getEvents({ keyword, city, size = 10 }) {
         console.error('Ticketmaster API Error:', error.response?.data || error.message);
         return {
             type: "text",
-            text: "Could not fetch data."
+            text: "Could not fetch events."
         };
     }
 }
