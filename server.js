@@ -19,6 +19,17 @@ app.get('/api', (req, res) => {
     res.status(200).send('API endpoint active');
 });
 
+app.get('/test', (req, res) => {
+    res.json({
+        status: "success",
+        full: "Test OK",
+        zobot: {
+            type: "text",
+            text: "Webhook is working"
+        }
+    });
+});
+
 app.post('/api', async (req, res) => {
     const { action, payload } = req.body;
 
@@ -43,7 +54,13 @@ app.post('/api', async (req, res) => {
             return res.status(502).json(result);
         }
 
-        res.json(result);
+        // Wrap result in global Zobot response format
+        res.json({
+            status: "success",
+            full: result.full || "Response generated",
+            zobot: result.zobot || { type: "text", text: "No content generated" }
+        });
+
     } catch (error) {
         console.error('Error processing request:', error);
         res.status(500).json({ error: 'Internal Server Error', details: error.message });

@@ -27,29 +27,30 @@ export async function getEvents({ keyword, city, size = 10 }) {
 
         if (events.length === 0) {
             return {
-                type: 'collection',
-                title: 'Events near you',
-                items: [],
-                message: 'No events found matching your criteria.'
+                full: "No events found.",
+                zobot: {
+                    type: "text",
+                    text: "No events found matching your criteria."
+                }
             };
         }
 
-        const items = events.map(event => ({
-            title: event.name,
-            subtitle: event.dates?.start?.localDate || 'Date TBA',
-            image_url: event.images?.find(img => img.ratio === '16_9' && img.width > 600)?.url || event.images?.[0]?.url || '',
-            action: {
-                type: 'link',
-                payload: {
-                    url: event.url
-                }
-            }
-        }));
-
         return {
-            type: 'collection',
-            title: 'Events near you',
-            items: items
+            full: "Here are events near you:",
+            zobot: {
+                type: "cards",
+                cards: events.map(event => {
+                    const chosenImageUrl = event.images?.find(img => img.ratio === '16_9' && img.width > 600)?.url || event.images?.[0]?.url || '';
+                    return {
+                        title: event.name,
+                        description: event.dates?.start?.localDate || "Date TBA",
+                        image: { url: chosenImageUrl },
+                        buttons: [
+                            { label: "View Event", type: "link", url: event.url }
+                        ]
+                    };
+                })
+            }
         };
 
     } catch (error) {

@@ -15,14 +15,20 @@ export async function buildPersonality(input) {
         try {
             const parsed = JSON.parse(jsonString);
             return {
-                type: 'personality',
-                data: parsed
+                full: parsed.description,
+                zobot: {
+                    type: "text",
+                    text: `Personality: ${parsed.personality_name}\n\n${parsed.description}`
+                }
             };
         } catch (parseError) {
             console.warn('Failed to parse Gemini response as JSON:', parseError);
             return {
-                type: 'text',
-                message: rawText
+                full: rawText,
+                zobot: {
+                    type: "text",
+                    text: rawText
+                }
             };
         }
 

@@ -15,23 +15,20 @@ async function getAccessToken(clientId, clientSecret) {
     return response.data.access_token;
 }
 
-function mapTracksToCollection(tracks, title) {
-    const items = tracks.map(track => ({
-        title: track.name,
-        subtitle: track.artists.map(artist => artist.name).join(', '),
-        image_url: track.album.images[0]?.url || '',
-        action: {
-            type: 'link',
-            payload: {
-                url: track.external_urls.spotify
-            }
-        }
-    }));
-
+function mapTracksToZobot(tracks, seedGenre) {
     return {
-        type: 'collection',
-        title: title,
-        items: items
+        full: `Top ${seedGenre} picks for you:`,
+        zobot: {
+            type: "cards",
+            cards: tracks.map(track => ({
+                title: track.name,
+                description: track.artists.map(a => a.name).join(", "),
+                image: { url: track.album.images[0]?.url || "" },
+                buttons: [
+                    { label: "Open in Spotify", type: "link", url: track.external_urls.spotify }
+                ]
+            }))
+        }
     };
 }
 
@@ -65,7 +62,7 @@ export async function getSongRecommendations({ genre = "pop", limit = 6 }) {
             });
 
             if (response.data.tracks && response.data.tracks.length > 0) {
-                return mapTracksToCollection(response.data.tracks, `Top ${seedGenre} picks`);
+                return mapTracksToZobot(response.data.tracks, seedGenre);
             }
         } catch (recError) {
             console.error(`Spotify Recommendations failed for genre '${seedGenre}':`, recError.response?.data || recError.message);
@@ -86,13 +83,15 @@ export async function getSongRecommendations({ genre = "pop", limit = 6 }) {
         });
 
         if (searchResponse.data.tracks && searchResponse.data.tracks.items.length > 0) {
-            return mapTracksToCollection(searchResponse.data.tracks.items, `Found in ${seedGenre}`);
+            return mapTracksToZobot(searchResponse.data.tracks.items, seedGenre);
         }
 
         return {
-            type: 'collection',
-            title: "No results",
-            items: []
+            full: "No music found.",
+            zobot: {
+                type: "text",
+                text: "Sorry, I couldn't find any songs for that genre."
+            }
         };
 
     } catch (error) {
